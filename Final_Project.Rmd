@@ -1,0 +1,736 @@
+---
+#title: "NFT Data Viz Group Project"
+#author: "Taha Saeed, Fulin Wang, Junting Zhou, Yanlin Zhang"
+#date: May 4, 2022
+output:
+  revealjs::revealjs_presentation:
+    css:  "../custom.css" 
+    self_contained: false
+    theme: white
+    highlight: pygments
+    slide_level: 2
+    reveal_options:
+      controls: false
+      progress: false
+      slideNumber: "c/t"
+      showSlideNumber: "speaker"
+    reveal_plugins: ["notes"]
+    data-separator-notes: "Note:"
+    keep_md: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+## {data-background-color="white"}
+
+
+[NFT Data Visualization Group Project]{style="color:black; font-weight:bold; font-size:60px"}
+
+<br> QMSS - Columbia University<br> Spring 2022<br>  Taha Saeed, Fulin Wang, Junting Zhou, Yanlin Zhang\
+<br>
+
+```{r, echo=FALSE, out.width = "65%"}
+knitr::include_graphics("/Users/tahasaeed/Documents/GitHub/Group_Y_NFT/images/nft.jpeg")
+```
+
+## What is NFT?
+
+
+```{r setup, echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
+library("knitr")
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE, message=FALSE, warning = FALSE,
+fig.height=4.5)
+```
+
+```{r, echo=FALSE, out.width = "100%"}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(plotly)
+library(patchwork)
+library(cowplot)
+library(magick)
+
+history_sales = read.csv("/Users/tahasaeed/Documents/GitHub/Group_Y_NFT/NFT_Sales 2.csv")
+collections_sales = read.csv("//Users/tahasaeed/Documents/GitHub/Group_Y_NFT/nft_sales.csv")
+```
+
+
+```{r, echo=FALSE, out.width = "100%"}
+knitr::include_graphics("/Users/tahasaeed/Documents/GitHub/Group_Y_NFT/images/whatisnft.png")
+```
+
+---
+
+## What is NFT?
+
+```{r, echo=FALSE, out.width = "80%"}
+knitr::include_graphics("/Users/tahasaeed/Documents/GitHub/Group_Y_NFT/images/nftexample.png")
+```
+<section style="text-align: left;">
+
+<small>
+NFTs have many use cases across art, collectibles, gaming, ticketing, and as digital passes. Three examples of the most popular projects are:<br>
+- Bored Ape Yacht Club (BAYC) which is a collection of 10,000 pictures that are traded and showcased as digital art<br>
+- NBA Top Short which recreates the basketball card experience digitally<br>
+- Axie Infinity which allows players to NFT heroes and battle other players for experience and resources<br>
+Each of these examples use NFTs highly differentiated and organizes different communities with different interests. For example, BAYC has a limited number of exclusive pieces, whereas Axie infinity has millions of NFT heroes that are held by hundreds of thousands of players.
+</small>
+
+</section>
+
+## Outline
+
+<section style="text-align: left;">
+
+<small>
+To better understand the NFT space, our team has collected sales, tweet, and network data for NFTs on Ethereum, the most popular blockchain platform to host NFTs.  Over the course of the project we will be looking into:
+<br>
+<br><br>
+- An overview of how revenue and user base are distributed across projects<br><br>
+- Success of NFT projects in terms of sales and user growth<br><br>
+- Sentiment and language used in the NFT twitter space <br>
+
+</small>
+
+</section>
+
+<!-- 
+
+## Visualization: Why, what, how?
+
+```{r, echo=FALSE, out.width = "100%"}
+million_club_pie <- collections_sales %>% 
+  mutate(million_club = case_when(Sales >= 1000000000 ~ "1. More than 1 Billion", 
+                                  Sales >= 500000000 ~ "2. 500 Million ~ 1 Billion",
+                                  Sales >= 100000000 ~ "3. 100 Million ~ 500 Million",
+                                  Sales < 100000000 ~ "4. Less than 100 Million")) 
+
+million_club_a <- million_club_pie %>%
+  group_by(million_club) %>%
+  summarise(total_sales_revenue = sum(as.numeric(Sales)))
+
+million_club_b <- million_club_pie %>% count(million_club)
+million_club_ab <- left_join(million_club_b, million_club_a, by = "million_club")
+
+plot_ly(million_club_b,
+       x= ~million_club,
+       y= ~n,
+       type = "bar") %>%
+  layout(title = "NFT Projects Count by Revenue Group",
+         xaxis = list(autotypenumbers = 'strict', title = '# of projects'),
+         yaxis = list(title = '# of projects'))
+
+#pie chart to show the revene relationship
+plot_ly(million_club_pie, labels = ~million_club, values = ~Sales, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        text = ~paste('$', Sales, ' billions'),
+        marker = list(colors = palette.pals,
+                      line = list(color = '#FFFFFF', width = 1)),
+        showlegend = TRUE) %>% 
+  layout(title = "NFT Colleciton Total History Sales Distribution")
+```
+
+-->
+
+
+## Top NFT Collections
+
+```{r, echo=FALSE, out.width = "100%"}
+collections_sales$Sales <- gsub("\\$", "", collections_sales$Sales)
+collections_sales$Sales <- as.numeric(gsub(",", "", collections_sales$Sales))
+collections_sales$Buyers <- as.numeric(gsub(",", "", collections_sales$Buyers))
+collections_sales$Txns <- as.numeric(gsub(",", "", collections_sales$Txns))
+collections_sales$Owners <- as.numeric(gsub(",", "", collections_sales$Owners))
+
+top15_sales <- collections_sales %>% 
+  arrange(desc(Sales)) %>% 
+  slice(1: 10)
+
+top15_buyers <- collections_sales %>% 
+  arrange(desc(Buyers)) %>% 
+  slice(1: 10)
+
+plot_ly(data = top15_sales,
+        x = ~Collections,
+        y = ~Sales,
+        color = ~Collections,
+        type = "bar") %>% 
+  layout(title = 'Top NFT Collections by Sales',
+         yaxis = list(title = "Total Sales ($)"),
+         xaxis = list(title = "NFT Collections",
+                      categoryorder = "array",
+                      categoryarray = c("Axie Infinity", "CryptoPunks", "Art Blocks",
+                                        "Bored Ape Yacht Club", "NBA Top Shot",
+                                        "Mutant Ape Yacht Club", "Loot", "Meebits",
+                                        "Cool Cats", "CrypToadz")))
+```
+
+<section style="text-align: left;">
+
+<small>
+-   There are 5 out of 250 projects that drove 51.6% of total NFT sales revenue on Ethereum. The top-heavy nature of the industry warrants a deeper dive to understand what projects have the biggest impact inflows into the NFT space.<br>
+-   In terms of revenue the largest project is Axie Infinity - an online game - with a revenue of $3.3B. The second largest is CryptoPunks ($1.6B), ArtBlocks ($1B), BAYC ($783M), and NBA Top Shot ($781M). 
+</small>
+
+</section>
+
+
+## Top NFT Collections
+
+```{r, echo=FALSE, out.width = "100%"}
+plot_ly(data = top15_buyers,
+        x = ~Collections,
+        y = ~Buyers,
+        color = ~Collections,
+        type = "bar") %>% 
+  layout(title = 'Top NFT Collections by Buyers',
+         yaxis = list(title = "Total Buyers"),
+         xaxis = list(title = "NFT Collections",
+                      categoryorder = "array",
+                      categoryarray = c("Axie Infinity", "Alien Worlds", "NBA Top Shot",
+                                        "CryptoKitties", "Sorare", "Zed Run",
+                                        "Art Blocks", "Farmers World", "Colonize Mars",
+                                        "Topps MLB")))
+```
+
+<section style="text-align: left;">
+
+<small>
+-   Revenue, however, does not necessarily align with total buyers. In contrast, the projects with the largest number of buyers are Axie Infinity (1M buyers), Alien Worlds (405K), and NBA Top Shot (374K).
+</small>
+
+</section>
+
+## NFT Growth Trend
+
+```{r, echo=FALSE, out.width = "100%"}
+library(tidyquant)
+history_sales$Date <- as.Date(history_sales$Date)
+history_sales2 <- history_sales2 <- history_sales[history_sales$Date > "2020-01-01"& history_sales$Date <"2021-11-12",]
+
+x <- c(3,5)
+for (i in x) {
+    history_sales2[,i] <- as.numeric(history_sales2[,i])
+}
+
+history_sales_cleaned_0 <- na.omit(history_sales)
+history_sales_cleaned <- na.omit(history_sales2)
+
+
+user17 <- plot_ly(history_sales_cleaned_0, x=~Date, y=~Active_Market_Wallets,
+        type = 'scatter', mode = 'lines',
+        line = list(width = 2), name = "2017-2021") %>% 
+  layout(title = "Active NFT users 2017-2021", hovermode = "x unified",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = "Number of users"))
+
+user20 <- plot_ly(history_sales_cleaned, x=~Date, y=~Active_Market_Wallets,
+        type = 'scatter', mode = 'lines',
+        line = list(width = 2), name = "2020-2021") %>% 
+  layout(title = "Active NFT users in different periods", hovermode = "x unified",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = "Number of users"))
+
+subplot(user17, user20, nrows = 2, titleY = TRUE)
+```
+
+
+<section style="text-align: left;">
+
+<small>
+-   As we can see from the net growth trend, NFT heated up in 2021, especially during the last quarter. Customers turn crazy about it. In October, it riches a maximum of 30k daily active users.<br>
+-   However, the trend seems to decease after the maximum, it still has a much more active users than any periods before 2021.<br>
+</small>
+
+</section>
+
+
+<!--
+
+## NFT Growth Trend
+
+```{r, echo=FALSE, out.width = "100%"}
+plot_ly(history_sales_cleaned, x=~Date, y=~Sales_USD,
+        type = 'scatter', mode = 'lines',
+        line = list(width = 2)) %>% 
+  layout(title = "Sales 2020-2021", hovermode = "x unified",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = "Sales"))
+```
+
+
+## NFT Growth Trend
+
+```{r, echo=FALSE, out.width = "100%"}
+plot_ly(history_sales_cleaned, x=~Date, y=~Number_of_Sales,
+        type = 'scatter', mode = 'lines',
+        line = list(width = 2)) %>% 
+  layout(title = "Number of Sales 2020-2021", hovermode = "x unified",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = "Number of Sales"))
+```
+-->
+
+## NFT Growth Trend
+
+```{r, echo=FALSE, out.width = "100%"}
+primary <- plot_ly(history_sales_cleaned, x=~Date, y=~Primary_Sales_cumsum,
+        type = 'scatter', mode = 'lines',
+        line = list(width = 2), name = "NFT primary market") %>% 
+  layout(title = "Cumulative Sales 2020-2021", hovermode = "x unified",
+         yaxis = list(title = "Cumulative Sales ($)"))
+
+secondary <- plot_ly(history_sales_cleaned, x=~Date, y=~Secondary_Sales_cumsum,
+        type = 'scatter', mode = 'lines',
+        line = list(width = 2), name = "NFT secondary market") %>% 
+  layout(title = "Cumulative Sales 2020-2021", hovermode = "x unified",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = "Cumulative Sales ($)"))
+
+subplot(primary, secondary, nrows = 2, titleY = TRUE)
+```
+
+<section style="text-align: left;">
+
+<small>
+-   As we look into the net growth trends, we can see that the primary marketing has an uphill trend and the slope gets steeper after August of 2021. The net sales even passed 6 million dollars. It's not hard to see that people have been investing as they see NFT as a huge opportunity. More and more people would like to dive into the NFT projects.<br>
+-   On the other hand, if we look at the secondary market, during the same period of the fourth quarter of 2021, it's maximum sales was only around 60K which was almost 100 times smaller than the primary market. Also the trend goes up and down, and is more volatile than the primary market.<br>
+</small>
+
+</section>
+
+
+
+
+## Ethereum NFT Network
+
+<section style="text-align: left;">
+
+**Ethereum NFTs SQLite Database**:
+<br>
+<small>
+- 9,388 Ethereum NFT projects<br>
+- Represents the activity of Ethereum NFT market from Apr. 1 to Sept. 25, 2021<br>
+- Data source: https://www.kaggle.com/datasets/simiotic/ethereum-nfts<br>
+</small>
+  
+  
+**Network Construction**:
+<br>
+<small>
+- Get a list of biggest projects and volume of tranfers<br>
+- Create a dictionary to map names & addresses to contracts<br>
+- Take top wallet owners<br>
+- Create the edge table<br>
+- Adding parties and neighbors to node hover data<br>
+</small>
+
+</section>
+
+## Ethereum NFT Network
+
+```{r, echo=FALSE, out.width = "85%"}
+htmltools::includeHTML("/Users/yanlinzhang/Desktop/Data Visualization/Group_Y_NFT/external_html_files/NFTMap1.html")
+```
+
+
+## Ethereum NFT Network
+
+<section style="text-align: left;">
+
+<small>
+-   _(Note: you can hover over the whole network and click on specific nodes to see their neighbors. You can also manually zoom in, zoom out, and drag the network if the initial rendered output is a little off)_ <br><br>
+-   The thinner the connection, the less owners, and vice versa.<br><br>
+-   Each nodes represent an individual NFT Project.<br><br>
+-   The bigger the node, the bigger the project size, and that means more people are involved with the particular project.<br><br>
+-   CryptoPoops, Mighty Dinos, Meebits, 9021 Collectives are the major ones with biggest nodes.<br><br>
+-   Commonly known NFTs such as BoredApeYachtClub that has tremendous high price does not hold a strong size. The reason might be that those NFTs focus more on rareness instead of the quantity amount.
+</small>
+
+</section>
+
+
+
+## NFT Tweet Mining
+
+<section style="text-align: left;">
+
+**Tweet Data**:
+<br>
+<small>
+- 48,858 tweets with @NFT hashtags<br>
+- Scrapped from Dec. 2021 to Mar. 2022<br>
+- Data source: https://www.kaggle.com/datasets/alishafaghi/nft-tweets-2022<br>
+</small>
+  
+  
+**Tweet Preprocessing**:
+<br>
+<small>
+- Convert documents to corpus<br>
+- Remove tweet-specific elements such as URLs, mentions, reserved words, emojis, smileys, and so on<br>
+- Convert strings to lowercases and strip whitespaces<br>
+- Remove punctuations, digits, and other types of special characters<br>
+- Remove domain-specific stopwords like NFT(s)<br>
+- Tokenize and lemmatize tokens<br>
+</small>
+
+</section>
+
+
+## NFT Tweets Term Frequency
+
+```{r, echo=FALSE, out.width = "100%"}
+library(tidyverse)
+library(ggplot2)
+library(tm)
+library(stringr)
+library(textstem)
+library(quanteda)
+library(tidytext)
+library(corpus)
+library(wordcloud)
+library(wordcloud2)
+library(ggthemes)
+library(plotly)
+library(DT)
+library(RColorBrewer)
+library(patchwork)
+library(cowplot)
+library(magick)
+
+df2 <- read.csv("/Users/yanlinzhang/Desktop/Data Visualization/Group_Y_NFT/data/50K nft tweets.csv", header = TRUE)
+```
+
+
+```{r, echo=FALSE, out.width = "100%"}
+options(warn=-1)
+
+df2$clean_tweet = gsub("&amp", "", df2$tweet)
+df2$clean_tweet = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", df2$clean_tweet)
+df2$clean_tweet = gsub("@\\w+", "", df2$clean_tweet)
+df2$clean_tweet = gsub("[[:punct:]]", "", df2$clean_tweet)
+df2$clean_tweet = gsub("[[:digit:]]", "", df2$clean_tweet)
+df2$clean_tweet = gsub("http\\w+", "", df2$clean_tweet)
+df2$clean_tweet = gsub("[ \t]{2,}", "", df2$clean_tweet)
+df2$clean_tweet = gsub("^\\s+|\\s+$", "", df2$clean_tweet)
+
+new_stops <- c("nft", "nfts", "follow", stopwords("en"))
+
+clean_corpus <- function(corpus){
+  corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, new_stops)
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, stripWhitespace)
+  corpus <- tm_map(corpus, lemmatize_strings)
+  return(corpus)
+}
+
+tweet_corpus <- Corpus(VectorSource(df2$clean_tweet))
+tweet_corpus_cleaned = clean_corpus(tweet_corpus)
+tweet_tdm <- TermDocumentMatrix(tweet_corpus_cleaned)
+tweet_td <- tidy(tweet_tdm)
+
+tweet_td_lemmatize <- tweet_td %>%
+  mutate(lemma = lemmatize_words(term))
+tweet_td_viz <- tweet_td_lemmatize %>% 
+  group_by(lemma) %>%
+  summarise(n = sum(count)) %>%
+  top_n(n = 20, wt = n)  %>%
+  ungroup() %>% 
+  arrange(desc(n))
+
+tweet_word_freq <- ggplot(data = tweet_td_viz, aes(reorder(lemma, n), n)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  ggtitle("Top 20 terms in NFT Tweets") +
+  ylab("Term Frequency Count") +
+  xlab("") +
+  theme(plot.title = element_text(size = 9.5, hjust = 0.5)) +
+  theme_pander()
+
+ggplotly(tweet_word_freq, dynamicTicks = TRUE)
+```
+
+<section style="text-align: left;">
+
+<small>
+- Top words include _nftcommunity_, _giveaway_, _discord_, _mint_, etc., all common NFT topics or jargons<br>
+- For example, _mint_, mentioned 5,274 times, means to uniquely publish your token on the blockchain, and _whitelist_, mentioned 4,879 times, means people who get early and guaranteed access to mint<br>
+- None of the specific NFTs or cryptocurrencies appear in the list though<br>
+</small>
+
+</section>
+
+
+## NFT Tweets Term Frequency
+
+```{r, echo=FALSE, out.width = "100%"}
+tweet_td_wcprep <- tweet_td_lemmatize %>% 
+  group_by(lemma) %>% 
+  summarise(n = sum(count)) %>% 
+  arrange(desc(n))
+
+set.seed(41)
+
+color_range_number <- length(unique(tweet_td_wcprep$n))
+color <- colorRampPalette(brewer.pal(9,"Blues")[2:6])(color_range_number)[factor(tweet_td_wcprep$n)]
+
+wordcloud2(tweet_td_wcprep, rotateRatio = 0.2,
+           maxRotation = 0.1, minRotation = 0.1,
+           color = color,
+           size = 0.65, shape = "hexagon")
+```
+
+<section style="text-align: left;">
+
+<small>
+- _(Note: you might have to fresh the page to make the word cloud visible. That's one problem with wordcloud2 API in R)_ <br>
+- Above is an interactive word cloud of the most frequent terms in the corpus. Try hover over the terms to see specific term frequencies.<br>
+- It's not hard to see that even though NFTs are among the most speculative, people are enthusiastic and have lots of faiths in the virtual market<br>
+</small>
+
+</section>
+
+
+## NFT Tweet Sentiment Analysis
+
+<section style="text-align: left;">
+
+**Sentiment Computation**:
+<br>
+<small>
+- _Bing_ sentiment lexicon dictionary is used to categorize words in a binary fashion into positive and negative categories<br>
+- The terms from NFT tweets are compared with the lexicons, and each positive or negative word count as a score of 1 for each word matched<br>
+- Each document's sentiment score is normalized between 1 and -1 through _(#PositiveWords + #NegativeWords) / (#PositiveWords + #NegativeWords)_<br>
+- Top 1000 positive and negative documents, based on corresponding sentiment scores closest to 1's and 0's respectively, are then subsetted and preprocessed separately<br>
+</small>
+  
+</section>
+
+
+## NFT Tweet Sentiment Analysis
+
+```{r, echo=FALSE, out.width = "100%"}
+options(warn=-1)
+
+df2$document <- 1:nrow(df2)
+
+tweet_sentiment <- df2 %>% 
+  unnest_tokens(word, tweet) %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  mutate(word = 1) %>% 
+  pivot_wider(names_from = sentiment, values_from = word,
+              values_fn = sum, values_fill = 0) %>% 
+  mutate(score = (positive - negative)/(positive + negative)) %>% 
+  mutate(sentiment_score = case_when(score > 0 ~ "positive", 
+                                     score <= 0 ~ "neutral or negative"))
+
+tweet_sentiment <- df2 %>% inner_join(tweet_sentiment, by = "document")
+
+positive_tweet <- filter(tweet_sentiment, sentiment_score == "positive") %>% 
+  arrange(desc(score)) %>% 
+  slice(1: 1000)
+negative_tweet <- filter(tweet_sentiment, sentiment_score == "neutral or negative") %>% 
+  arrange(score) %>% 
+  slice(1: 1000)
+
+positive_tweet_corpus <- Corpus(VectorSource(positive_tweet$clean_tweet.x))
+negative_tweet_corpus <- Corpus(VectorSource(negative_tweet$clean_tweet.x))
+
+positive_tweet_corpus_cleaned = clean_corpus(positive_tweet_corpus)
+negative_tweet_corpus_cleaned = clean_corpus(negative_tweet_corpus)
+
+positive_tweet_tdm <- TermDocumentMatrix(positive_tweet_corpus_cleaned)
+negative_tweet_tdm <- TermDocumentMatrix(negative_tweet_corpus_cleaned)
+
+positive_tweet_td <- tidy(positive_tweet_tdm)
+negative_tweet_td <- tidy(negative_tweet_tdm)
+```
+
+
+```{r, echo=FALSE, out.width = "100%"}
+positive_tweet_td_lemmatize <- positive_tweet_td %>%
+  mutate(lemma = lemmatize_words(term)) %>% 
+  group_by(lemma) %>%
+  summarise(n = sum(count)) %>% 
+  mutate(binary = "positive")
+
+negative_tweet_td_lemmatize <- negative_tweet_td %>%
+  mutate(lemma = lemmatize_words(term)) %>% 
+  group_by(lemma) %>%
+  summarise(n = sum(count)) %>% 
+  mutate(binary = "negative")
+
+combined <- merge(positive_tweet_td_lemmatize, 
+                  negative_tweet_td_lemmatize,
+                  by = 'lemma')
+
+top20_comparison_prep <- combined %>% 
+  arrange(desc(n.x)) %>% 
+  slice(1: 20)
+
+top20_positive <- top20_comparison_prep %>% 
+  select("lemma", "n.x", "binary.x") %>% 
+  rename("frequency" = "n.x") %>% 
+  rename("Sentiment" = "binary.x")
+
+top20_negative <- top20_comparison_prep %>% 
+  select("lemma", "n.y", "binary.y") %>% 
+  rename("frequency" = "n.y") %>% 
+  rename("Sentiment" = "binary.y")
+
+top20 <- rbind(top20_positive, top20_negative)
+
+pos <- ggplot(top20, aes(x = reorder(lemma, frequency), fill=Sentiment,,
+                  y = ifelse(test = Sentiment == "positive",
+                             yes = -frequency, no = frequency))) +
+  geom_bar(data = filter(top20, Sentiment == "positive"), stat = "identity") +
+  geom_bar(data = filter(top20, Sentiment == "negative"), stat = "identity") +
+  scale_fill_brewer(palette = "Accent", direction=-1) + coord_flip()  + ylab("") +
+  ggtitle("Top 20 Most Frequenct Words Comparison (sorted by positive terms)") +
+  theme(axis.title.y = element_text(size = 12),
+        axis.title.x = element_text(size = 13)) +
+  labs(x="", y="Frequency", fill="Sentiment") +
+  theme_pander()
+
+neg <- ggplot(top20, aes(x = reorder(lemma, frequency), fill=Sentiment,,
+                  y = ifelse(test = Sentiment == "negative",
+                             yes = -frequency, no = frequency))) +
+  geom_bar(data = filter(top20, Sentiment == "negative"), stat = "identity") +
+  geom_bar(data = filter(top20, Sentiment == "positive"), stat = "identity") +
+  scale_fill_brewer(palette = "Accent", direction=-1) + coord_flip()  + ylab("") +
+  ggtitle("Top 20 Most Frequenct Words Comparison (sorted by negative terms)") +
+  theme(axis.title.y = element_text(size = 12),
+        axis.title.x = element_text(size = 13)) +
+  labs(x="", y="Frequency", fill="Sentiment") +
+  theme_pander()
+
+ggplotly(pos, dynamicTicks = TRUE)
+```
+
+<section style="text-align: left;">
+
+<small>
+- The Pyramid plot above shows the top 20 most frequent terms in most positive documents compared with frequencies in negative documents accordingly.<br>
+- For words such as _like_, _good_, _christmas_, There are huge frequency discrepancies between positive and negative documents.<br>
+</small>
+
+</section>
+
+## NFT Tweet Sentiment Analysis
+
+```{r, echo=FALSE, out.width = "100%"}
+ggplotly(neg, dynamicTicks = TRUE)
+```
+
+<section style="text-align: left;">
+
+<small>
+- The Pyramid plot is horizontally reversed to show most frequent terms sorted from negative documents right now, just to show the term comparison more thoroughly.<br>
+- Words with little frequency differences across sentiment like _eth(Ethereum)_ , _nftart_, _nftcollector_ are more likely to be some neutral nouns<br>
+</small>
+
+</section>
+
+## NFT Tweet Sentiment Analysis
+
+```{r, echo=FALSE, out.width= "65%"}
+options(warn=-1)
+
+positive_strings <- paste(positive_tweet$clean_tweet.x, collapse=" ")
+negative_strings <- paste(negative_tweet$clean_tweet.x, collapse=" ")
+
+big_strings <- c(positive_strings, negative_strings)
+big_corpus <- Corpus(VectorSource(big_strings))
+big_corpus_cleaned <- clean_corpus(big_corpus)
+big_tdm <- TermDocumentMatrix(big_corpus_cleaned)
+big_m <- as.matrix(big_tdm)
+
+pos_neg <- data.frame(big_m)
+pos_neg <- pos_neg %>% 
+  rename(Positive = X1,
+         Negative = X2)
+
+par(mfrow=c(1, 1))
+comparison.cloud(pos_neg, colors = c("indianred3", "lightsteelblue3"),
+                 scale=c(0.2, 1.5), title.size= 1.8, random.order = FALSE,
+                 max.words = 100)
+```
+
+<section style="text-align: left;">
+
+<small>
+- The comparison word cloud once again shows frequently-used terms between positive and negative tweet documents<br>
+- Term frequency and variety in general are lot higher in positive tweets<br>
+- Terms in more negative tweets are not necessarily negative in the first place<br>
+</small>
+
+</section>
+
+## NFT Tweet Topic Modeling
+
+<section style="text-align: left;">
+
+**Latent Dirichlet Allocation**:
+<br>
+<small>
+- Latent Dirchlet Allocation (LDA), one of the topic models, is a generative probabilistic model that allows collections of discrete data, documents and words in our case, to be explained by unobserved groups.<br>
+- The algorithm returns the sorted words in each topic with respect to their probability score<br>
+</small>
+  
+  
+**Model Deployment**:
+<br>
+<small>
+- The cleaned corpus is processed by the multiple LDAs iteratively by increasing the pre-specified number of topics.<br>
+- Each LDA's corresponding *coherence score*, a metric of model coherency, are computed accordingly and plotted against number of topics.<br>
+- The Python *kneelocator* API helps determine that optimal number of topics = 12, and then a final LDA with 12 topics is constructed.<br>
+</small>
+
+</section>
+
+## NFT Tweet Topic Modeling
+
+
+```{r, echo=FALSE, out.width= "50%"}
+htmltools::includeHTML("/Users/yanlinzhang/Desktop/Data Visualization/Group_Y_NFT/external_html_files/LDA.html")
+```
+
+
+
+## NFT Tweet Topic Modeling
+
+<section style="text-align: left;">
+
+<small>
+
+- _(Note: the pyLDAvis is a Python API for interactive topic model visualization. The relative position of bubbles(topics) shows how relevant, or unrelevant they are with each other. The size of the bubble indicates number of words in the topic. If no bubbles are selected, the blue bar represents the overall term frequency. If a bubble is selected, the red bar gives the estimated number of times a given word is generated by a given topic.)_ <br><br>
+- For topic 1, the majority of used words are _amp_, _tag_, _friend_, _giveaway_, _discord_. It mainly talks about adding people into their discord, building up a community. They also provide giveaways for its members. Topic 9 weighs on _giveaway_ the most, as it might use giveaway as their strategy to promote their project. Topic 4 might focus more on the price of the NFT, as it has _eth_, which is Ethereum and drop as its common words. It may have a price advantage over others.<br><br>
+
+</small>
+
+</section>
+
+
+## NFT Tweet Topic Modeling
+
+<section style="text-align: left;">
+
+<small>
+
+- As we can see, topic 11, 10 and 8 are highly clustered together; _game_, _project_ and _stay_ are commonly used. They mainly talk about sustaining the project, introducing the game or promoting the project.<br><br>
+- Topic 3, 5, and 6 mainly talks about new projects that are first dropped, since their common words are _new_, _drop_ _first_, and _check_. They are trying to promote or advertise their new projects. Topic 2 focuses on mints and discording joining. Topic 7 talks about _art_ and _collections_.<br><br>
+- Topic 12 talks about interactions and other considerations about the project.<br><br>
+
+</small>
+
+</section>
+
+
